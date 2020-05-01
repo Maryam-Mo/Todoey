@@ -10,12 +10,44 @@ import UIKit
 
 class TodoListViewController: UITableViewController {
     let cellIdentifier = "TodoItemCell"
-    let itemArray = ["Find Mike", "Buy Eggos", "Destroy Demongargan"]
+    var itemArray = ["Find Mike", "Buy Eggos", "Destroy Demongargan"]
     
     override func viewDidLoad() {
         super.viewDidLoad()
     }
+    
 
+    @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
+                var textField = UITextField()
+                let alert = UIAlertController(title: "Add New Todoey Item", message: "", preferredStyle: .alert)
+                let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
+                    // what will happen when user click on Add I tem button
+                    self.itemArray.append(textField.text!) // never textfield.text will be nil but it will be empty
+                    self.tableView.reloadData()
+                }
+                alert.addTextField { (alertTextField) in
+                    alertTextField.placeholder = "Create new item"
+                    textField = alertTextField // we add a refrence of textfiled because when the closure will run we don't have any text
+                }
+                alert.addAction(action)
+                present(alert, animated: true, completion: nil)
+        
+    }
+    //    @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
+//        var textField = UITextField()
+//        let alert = UIAlertController(title: "Add New Todoey Item", message: "", preferredStyle: .alert)
+//        let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
+//            // what will happen when user click on Add I tem button
+//            self.itemArray.append(textField.text!) // never textfield.text will be nil but it will be empty
+//            self.tableView.reloadData()
+//        }
+//        alert.addTextField { (alertTextField) in
+//            alertTextField.placeholder = "Create new item"
+//            textField = alertTextField // we add a refrence of textfiled because when the closure will run we don't have any text
+//        }
+//        alert.addAction(action)
+//        present(alert, animated: true, completion: nil)
+//    }
 }
 
 extension TodoListViewController {
