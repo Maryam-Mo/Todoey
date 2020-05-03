@@ -13,7 +13,12 @@ class TodoListViewController: UITableViewController {
     
     let cellIdentifier = "TodoItemCell"
     var itemArray = [Item]()
-    let defaults = UserDefaults.standard
+    var selectedCategory: Category? {
+        didSet{
+            loadItems()
+        }
+    }
+//    let defaults = UserDefaults.standard
     let arrayKey = "TodoListArray"
 //    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!.appendingPathComponent("Items.plist")
     let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
@@ -22,9 +27,6 @@ class TodoListViewController: UITableViewController {
         super.viewDidLoad()
                 
         print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
-        
-        loadItems()
-        
     }
     
 
@@ -32,12 +34,13 @@ class TodoListViewController: UITableViewController {
                 var textField = UITextField()
                 let alert = UIAlertController(title: "Add New Todoey Item", message: "", preferredStyle: .alert)
                 let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
-                    // what will happen when user click on Add I tem button
+                    // what will happen when user click on Add Item button
                     
 //                    let newItem = Item()
                     let newItem = Item(context: self.context)
                     newItem.title = textField.text!// never textfield.text will be nil but it will be empty
                     newItem.done = false
+                    newItem.parentCategory = self.selectedCategory
                     self.itemArray.append(newItem)
                 
                     self.saveItems()
@@ -77,7 +80,7 @@ class TodoListViewController: UITableViewController {
         self.tableView.reloadData()
     }
     
-    func loadItems(with request: NSFetchRequest<Item> = Item.fetchRequest()) {// we can call it without any parameters also becuse it has default value
+    func loadItems(with request: NSFetchRequest<Item> = Item.fetchRequest(), predicate: NSPredicate? = nil) {// we can call it without any parameters also becuse it has default value
         // Using UserDefaults
         //        if let items = defaults.array(forKey: arrayKey) as? [Item] {
         //            itemArray = items
@@ -92,6 +95,12 @@ class TodoListViewController: UITableViewController {
 //                print("Error decoding item array, \(error)")
 //            }
 //        }
+        let categoryPredicate = NSPredicate(format: "parentCategory.name MATCHES %@", selectedCategory!.name!)
+        if let additionalPredicate = predicate {
+        request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate, additionalPredicate])
+        } else {
+            request.predicate = categoryPredicate
+        }
         do {
             itemArray = try context.fetch(request)
         } catch {
@@ -146,7 +155,7 @@ extension TodoListViewController: UISearchBarDelegate {
         
         request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
         
-        loadItems(with: request)// internal and external parameters
+        loadItems(with: request, predicate: request.predicate!)// internal and external parameters
     }
     
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {//when the text get changed
