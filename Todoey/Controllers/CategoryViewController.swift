@@ -7,29 +7,30 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
+import ChameleonFramework
 
-class CategoryViewController: UITableViewController {
+class CategoryViewController: SwipeTableViewController {
 
-    let cellIdentifier = "CategoryCell"
-    var categoryArray = [Category]()
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
-    
+    let realm = try! Realm()
+    var categories: Results<Category>?
+
     override func viewDidLoad() {
         super.viewDidLoad()
         loadCategories()
+        tableView.separatorStyle = .none
     }
         
-    //Mark: - Add New Categories
+    //MARK: - Add New Categories
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
         
         var textField = UITextField()
         let alert = UIAlertController(title: "Add New Category", message: "", preferredStyle: .alert)
         let action = UIAlertAction(title: "Add", style: .default) { (action) in
-            let category = Category(context: self.context)
+            let category = Category()
             category.name = textField.text!
-            self.categoryArray.append(category)
-            self.saveCategory()
+            category.color = UIColor.randomFlat().hexValue()
+            self.save(category: category)
         }
         alert.addTextField { (alertTextField) in
             alertTextField.placeholder = "Create a new category"
@@ -38,21 +39,54 @@ class CategoryViewController: UITableViewController {
         alert.addAction(action)
         present(alert, animated: true, completion: nil)
     }
+    
+    //MARK: - Data Manipulation Methods
+    func save(category: Category) {
+        do {
+            try realm.write{
+                realm.add(category)
+            }
+        } catch {
+            print("Error saving category \(error)")
+        }
+        tableView.reloadData()
+    }
+    
+    func loadCategories() {
+        categories = realm.objects(Category.self)
+        tableView.reloadData()
+    }
+    
+    override func updateModel(at indexPath: IndexPath) {
+        if let category = self.categories?[indexPath.row] {
+            do {
+                try self.realm.write {
+                    self.realm.delete(category)
+                }
+            } catch {
+                print("The selected category can't be deleted, \(error)")
+            }
+        }
+    }
 }
 
 extension CategoryViewController {
-    //Mark: - TableView Datasource Methods
+    
+    //MARK: - TableView Datasource Methods
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return categoryArray.count
+        return categories?.count ?? 1
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
-        let cell = tableView.dequeueReusableCell(withIdentifier: cellIdentifier, for: indexPath)
-        cell.textLabel?.text = categoryArray[indexPath.row].name
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
+        cell.textLabel?.text = categories?[indexPath.row].name ?? "No Categories Added Yet"
+        
+        cell.backgroundColor = UIColor(hexString: categories?[indexPath.row].color ?? "32B8F6")
         return cell
     }
-    //Mark: - TableView Delegate Methods
+    
+    //MARK: - TableView Delegate Methods
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         performSegue(withIdentifier: "goToItem", sender: self)
     }
@@ -60,30 +94,7 @@ extension CategoryViewController {
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         let destinationVC = segue.destination as! TodoListViewController
         if let indexPath = tableView.indexPathForSelectedRow {
-            destinationVC.selectedCategory = categoryArray[indexPath.row]
+            destinationVC.selectedCategory = categories?[indexPath.row]
         }
-    }
-
-}
-
-//Mark: - Data Manipulation Methods
-extension CategoryViewController {
-    
-    func saveCategory() {
-        do {
-            try context.save()
-        } catch {
-            print("Error saving category \(error)")
-        }
-        tableView.reloadData()
-    }
-    
-    func loadCategories(with request: NSFetchRequest<Category> = Category.fetchRequest()) {
-        do {
-            categoryArray = try context.fetch(request)
-        } catch {
-            print("Error loading categories from context \(error)")
-        }
-        tableView.reloadData()
     }
 }
